@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrap Small-Sample Forecaster — Fitsum Asegahegn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.32.0/plotly.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="suite-nav">
+  <div class="suite-nav__inner">
+    <span class="suite-nav__eyebrow">Applied Finance Suite</span>
+    <div class="suite-nav__links">
+      <a href="https://fitsum-asegahegn.github.io/markowitz-calculator/">Markowitz Calculator</a>
+      <a href="#" class="is-active">Bootstrap Forecaster</a>
+      <a href="https://fitsum-asegahegn.github.io/forex-divergence-simulator/">Forex Divergence Simulator</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero__inner">
+    <p class="eyebrow"><span class="eyebrow__dot"></span>Applied Finance Series · Tool 2 of 3</p>
+    <h1>Bootstrap Small&#8209;Sample <span class="accent">Forecaster</span></h1>
+    <p class="hero__lede">
+      Paste 12–24 months of revenue, sales, or cash-flow figures and get back a full probability
+      distribution for what happens next — median, worst case, and the exact odds of crossing a
+      number you care about. Built for businesses too small for ARIMA and too data-scarce for
+      confident guessing.
+    </p>
+    <blockquote class="hero__quote">
+      <strong>Second link in the chain:</strong> the same block-bootstrap and Monte Carlo machinery
+      that stress-tested bank portfolio risk in the author's thesis, and priced forex-spread exposure
+      for importers in the sibling tool, applied here directly to a single business's own ledger —
+      no minimum data history required. Methodology: <em>A Bootstrap-Based Forecasting Framework for
+      Small Business Samples</em> (Asegahegn, 2026).
+    </blockquote>
+
+    <div class="notice">
+      ⚠ Demo methodology — validated on synthetic SME-pattern data (Section 4 of the paper), not yet
+      backtested against real Ethiopian ledger series
+    </div>
+
+    <div class="ref-panel">
+      <p class="ref-panel__title">Sample size guidance</p>
+      <div class="ref-panel__grid">
+        <div><span class="ref-panel__num">12–14</span><span class="ref-panel__label">usable, wide intervals</span></div>
+        <div><span class="ref-panel__num">15–24</span><span class="ref-panel__label">recommended range</span></div>
+        <div><span class="ref-panel__num">&lt; 12</span><span class="ref-panel__label">tool still runs, flags low confidence</span></div>
+      </div>
+      <p class="ref-panel__note">No seasonal adjustment is attempted below 24 points — there isn't enough data for two full cycles to estimate it reliably.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel" id="input-panel">
+    <h2>Your Data</h2>
+    <p class="panel__sub">Nothing here is stored or sent anywhere — the forecast runs entirely in your browser.</p>
+
+    <div class="field">
+      <label for="series-input">Monthly figures, oldest first</label>
+      <span class="field__hint">Birr — paste or type, separated by commas, spaces, or new lines</span>
+      <textarea id="series-input" rows="4" placeholder="e.g. 82000, 79500, 91000, 88200, 95000, 101000, 97500, 106000, 112000, 108500, 115000, 121000"></textarea>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="horizon-select">Forecast horizon</label>
+        <div class="segmented" id="horizon-select">
+          <button data-value="1">1 month</button>
+          <button data-value="3" class="is-active">3 months</button>
+          <button data-value="6">6 months</button>
+          <button data-value="12">12 months</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="target-select">What you want the odds on</label>
+        <div class="segmented" id="target-select">
+          <button data-value="next" class="is-active">Next month's value</button>
+          <button data-value="cumulative">Total over the horizon</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="threshold-input">Threshold you care about</label>
+      <span class="field__hint">Birr — the tool reports P(value exceeds this)</span>
+      <input type="number" id="threshold-input" placeholder="e.g. 120000">
+    </div>
+
+    <div class="button-row">
+      <button class="btn btn--primary" id="run-btn">Run Forecast</button>
+      <button class="btn btn--ghost" id="sample-btn">Load Sample Data</button>
+      <button class="btn btn--ghost" id="reset-btn">Reset</button>
+    </div>
+
+    <p class="warn-inline" id="input-warning" hidden></p>
+  </section>
+
+  <section class="panel panel--readout" id="readout-panel">
+    <h2>Simulation Readout</h2>
+    <div id="readout-empty" class="readout-empty">Run a forecast to see your exposure translated into plain language.</div>
+
+    <div id="readout-content" hidden>
+      <div class="readout-grid">
+        <div class="stat-card">
+          <span class="stat-card__label" id="prob-label">P(exceeds threshold)</span>
+          <span class="stat-card__value accent" id="prob-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__label" id="median-label">Median forecast</span>
+          <span class="stat-card__value" id="median-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__label" id="worst-label">Worst case (5th pct)</span>
+          <span class="stat-card__value" id="worst-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__label" id="best-label">Best case (95th pct)</span>
+          <span class="stat-card__value" id="best-value">—</span>
+        </div>
+      </div>
+      <ul class="plain-language" id="plain-language"></ul>
+    </div>
+  </section>
+
+  <section class="panel" id="chart-panel">
+    <h2>Forecast Fan Chart</h2>
+    <p class="panel__sub">Solid line is your history. Shaded bands are the 50%, 80%, and 95% bootstrap prediction intervals — built from resampled blocks of your own residuals, not an assumed distribution.</p>
+    <div id="fan-chart" class="chart"></div>
+  </section>
+
+  <section class="panel" id="hist-panel">
+    <h2>Distribution of Outcomes</h2>
+    <p class="panel__sub" id="hist-sub">3,000 simulated futures for your selected target.</p>
+    <div id="hist-chart" class="chart chart--short"></div>
+  </section>
+
+  <section class="panel panel--explainer">
+    <details>
+      <summary>How this works</summary>
+      <div class="explainer-body">
+        <p>
+          The series is split into a systematic part and a residual part. If a linear trend is
+          statistically detectable, it's fit by ordinary least squares; otherwise the systematic
+          part is just the sample average. What's left over — the residuals — is resampled using a
+          <strong>circular block bootstrap</strong>, with a block length of ⌊n/3⌋, so that short-run
+          dependence between consecutive months is preserved instead of being shuffled away.
+        </p>
+        <p>
+          For each of 3,000 bootstrap replicates, a new residual sequence is drawn, the trend is
+          re-estimated on the reconstructed series (capturing estimation uncertainty, not just
+          noise), extrapolated forward to the requested horizon, and combined with an independently
+          resampled future residual. The resulting 3,000 future paths form the empirical predictive
+          distribution shown in the fan chart and histogram above.
+        </p>
+        <p>
+          Intervals here are computed with the direct percentile method rather than the
+          bias-corrected-and-accelerated (BCa) adjustment specified in the paper — a reasonable
+          proxy for small, roughly symmetric residual sets, but one that can understate skew.
+          A future version may add the BCa bias/acceleration correction client-side.
+        </p>
+      </div>
+    </details>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  Fitsum Asegahegn · Statistics, Addis Ababa University ·
+  <a href="https://fitsum-asegahegn.github.io/portfolio-website/">Portfolio</a> ·
+  <a href="https://github.com/fitsum-asegahegn">GitHub</a> ·
+  <a href="https://linkedin.com/in/fitsum-asegahegn">LinkedIn</a>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
