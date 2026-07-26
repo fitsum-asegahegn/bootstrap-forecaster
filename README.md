@@ -12,4 +12,4 @@ This tool implements a double-bootstrap procedure:
    each forecast horizon.
 
 For the complete methodology, see the accompanying paper:  
-[A Bootstrap-Based Forecasting Framework for Small Business Samples](docs/bootstrap_forecasting_paper.docx)
+[A Bootstrap-Based Forecasting Framework for Small Business Samples](docs/bootstrap_forecasting_paper.pdf)
